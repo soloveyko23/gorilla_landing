@@ -332,6 +332,13 @@
                 return isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows();
             }
         };
+        function addLoadedClass() {
+            if (!document.documentElement.classList.contains("loading")) window.addEventListener("load", (function() {
+                setTimeout((function() {
+                    document.documentElement.classList.add("loaded");
+                }), 0);
+            }));
+        }
         function getHash() {
             if (location.hash) return location.hash.replace("#", "");
         }
@@ -4058,6 +4065,45 @@
             inertion: .4,
             spring: .5
         });
+        function init() {
+            new script_SmoothScroll(document, 150, 16);
+        }
+        function script_SmoothScroll(target, speed, smooth) {
+            if (target === document) target = document.scrollingElement || document.documentElement || document.body.parentNode || document.body;
+            var moving = false;
+            var pos = target.scrollTop;
+            var frame = target === document.body && document.documentElement ? document.documentElement : target;
+            target.addEventListener("mousewheel", scrolled, {
+                passive: false
+            });
+            target.addEventListener("DOMMouseScroll", scrolled, {
+                passive: false
+            });
+            function scrolled(e) {
+                e.preventDefault();
+                var delta = normalizeWheelDelta(e);
+                pos += -delta * speed;
+                pos = Math.max(0, Math.min(pos, target.scrollHeight - frame.clientHeight));
+                if (!moving) update();
+            }
+            function normalizeWheelDelta(e) {
+                if (e.detail) if (e.wheelDelta) return e.wheelDelta / e.detail / 40 * (e.detail > 0 ? 1 : -1); else return -e.detail / 3; else return e.wheelDelta / 120;
+            }
+            function update() {
+                moving = true;
+                var delta = (pos - target.scrollTop) / smooth;
+                target.scrollTop += delta;
+                if (Math.abs(delta) > .5) requestFrame(update); else moving = false;
+            }
+            var requestFrame = function() {
+                return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(func) {
+                    window.setTimeout(func, 1e3 / 50);
+                };
+            }();
+        }
+        window.addEventListener("DOMContentLoaded", (() => {
+            init();
+        }));
         console.clear();
         gsap.registerPlugin(ScrollTrigger);
         function createMarquee(direction, triggerClass) {
@@ -4072,8 +4118,10 @@
                 end: "bottom top",
                 onUpdate: self => {
                     speedTween && speedTween.kill();
+                    const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+                    const scrollSensitivityFactor = isTouchDevice ? .5 : 1;
                     speedTween = gsap.timeline().to(tl, {
-                        timeScale: 3 * direction * self.direction,
+                        timeScale: scrollSensitivityFactor * direction * self.direction,
                         duration: .25
                     }).to(tl, {
                         timeScale: 1 * direction * self.direction,
@@ -4149,15 +4197,211 @@
         }
         createMarquee(1, ".marquee-left");
         createMarquee(-1, ".marquee-right");
-        gsap.from(".title-animation", {
-            y: "30%",
-            ease: "power2.out",
-            duration: .8,
-            delay: .4,
+        function animateHeader(headerClass, triggerClass) {
+            gsap.from(headerClass, {
+                y: "-100%",
+                ease: "power3.inOut",
+                duration: 1,
+                opacity: 0,
+                scrollTrigger: {
+                    trigger: triggerClass,
+                    start: "top 90%",
+                    end: "bottom top",
+                    scrub: false,
+                    markers: false
+                }
+            });
+        }
+        gsap.from(".footer", {
+            y: "100%",
+            ease: "power3.inOut",
+            duration: 1,
             opacity: 0,
-            stagger: .3
+            scrollTrigger: {
+                trigger: ".contacts",
+                start: "top 90%",
+                end: "bottom top",
+                scrub: false,
+                markers: false
+            }
         });
+        animateHeader(".header", ".hero");
+        function animateElementWithScrollTrigger(animationClass, triggerClass) {
+            gsap.from(`${triggerClass} ${animationClass}`, {
+                y: "30%",
+                ease: "power3.inOut",
+                duration: .7,
+                delay: .4,
+                opacity: 0,
+                stagger: .1,
+                scrollTrigger: {
+                    trigger: triggerClass,
+                    start: "top 90%",
+                    end: "bottom 0%",
+                    scrub: false
+                }
+            });
+        }
+        function animateCardsWithOpacity(cardClass, triggerClass, delay = 0) {
+            gsap.from(`${triggerClass} ${cardClass}`, {
+                opacity: 0,
+                ease: "power3.inOut",
+                duration: .8,
+                stagger: .2,
+                delay,
+                scrollTrigger: {
+                    trigger: triggerClass,
+                    start: "top 80%",
+                    end: "bottom 20%",
+                    scrub: false,
+                    markers: false
+                }
+            });
+        }
+        animateCardsWithOpacity(".benefits__slide", ".benefits__wrapper", 0);
+        animateCardsWithOpacity(".our-products__item", ".our-products__list", 0);
+        animateCardsWithOpacity(".our-experts__item", ".our-experts__list", 0);
+        animateCardsWithOpacity(".about-traffic__column", ".about-traffic__benefits", 0);
+        animateCardsWithOpacity(".about-traffic__item", ".about-traffic__list", .15);
+        animateCardsWithOpacity(".our-team__participant", ".our-team__list", 0);
+        function animateTextWithStagger(textClass, triggerClass, delay = 0) {
+            gsap.from(`${triggerClass} ${textClass} p`, {
+                y: "50%",
+                opacity: 0,
+                ease: "power3.inOut",
+                duration: .8,
+                stagger: .2,
+                delay,
+                scrollTrigger: {
+                    trigger: triggerClass,
+                    start: "top 80%",
+                    end: "bottom 20%",
+                    scrub: false,
+                    markers: false
+                }
+            });
+        }
+        animateTextWithStagger(".text-animation", ".hero", .2);
+        gsap.from(`.benefits .slider-navigation`, {
+            y: "50%",
+            opacity: 0,
+            ease: "power3.inOut",
+            duration: .8,
+            stagger: .2,
+            scrollTrigger: {
+                trigger: ".benefits",
+                start: "top 80%",
+                end: "bottom 20%",
+                scrub: false,
+                markers: false
+            }
+        });
+        gsap.from(`.hero .hero__button`, {
+            y: "50%",
+            opacity: 0,
+            ease: "power3.inOut",
+            duration: .8,
+            stagger: .2,
+            delay: .3,
+            scrollTrigger: {
+                trigger: ".hero",
+                start: "top 80%",
+                end: "bottom 20%",
+                scrub: false,
+                markers: false
+            }
+        });
+        gsap.from(`.our-products .our-products__mobile`, {
+            x: "50%",
+            opacity: 0,
+            ease: "power3.inOut",
+            duration: .8,
+            stagger: .2,
+            delay: .3,
+            scrollTrigger: {
+                trigger: ".our-products",
+                start: "top 80%",
+                end: "bottom 20%",
+                scrub: false,
+                markers: false
+            }
+        });
+        gsap.from(`.our-experts .our-experts__marquee`, {
+            opacity: 0,
+            ease: "power3.inOut",
+            duration: .8,
+            stagger: .2,
+            delay: .3,
+            scrollTrigger: {
+                trigger: ".our-experts",
+                start: "top 80%",
+                end: "bottom 20%",
+                scrub: false,
+                markers: false
+            }
+        });
+        gsap.from(`.contacts__form`, {
+            x: "-50%",
+            opacity: 0,
+            ease: "power3.inOut",
+            duration: .8,
+            stagger: .2,
+            delay: .3,
+            scrollTrigger: {
+                trigger: ".contacts",
+                start: "top 80%",
+                end: "bottom 20%",
+                scrub: false,
+                markers: false
+            }
+        });
+        gsap.from(`.contacts__image`, {
+            opacity: 0,
+            ease: "power3.inOut",
+            duration: .8,
+            stagger: .2,
+            delay: .3,
+            scrollTrigger: {
+                trigger: ".contacts",
+                start: "top 80%",
+                end: "bottom 20%",
+                scrub: false,
+                markers: false
+            }
+        });
+        const mediaQuery = window.matchMedia("(min-width: 992px)");
+        function initAnimation() {
+            if (mediaQuery.matches) {
+                const timeline = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: ".our-team",
+                        start: "top 100%",
+                        end: "bottom top",
+                        scrub: true
+                    }
+                });
+                timeline.to(".our-team__participant", {
+                    y: "-100%",
+                    ease: "none"
+                });
+                timeline.to(".our-team", {
+                    y: "100%",
+                    ease: "none",
+                    opacity: 0
+                }, ">");
+            }
+        }
+        initAnimation();
+        mediaQuery.addEventListener("change", initAnimation);
+        animateElementWithScrollTrigger(".title-animation", ".hero");
+        animateElementWithScrollTrigger(".title-animation", ".benefits");
+        animateElementWithScrollTrigger(".title-animation", ".our-products");
+        animateElementWithScrollTrigger(".title-animation", ".our-experts");
+        animateElementWithScrollTrigger(".title-animation", ".about-traffic");
+        animateElementWithScrollTrigger(".title-animation", ".our-team");
+        animateElementWithScrollTrigger(".title-animation", ".contacts");
         window["FLS"] = true;
+        addLoadedClass();
         menuInit();
         customCursor(true);
         formFieldsInit({
