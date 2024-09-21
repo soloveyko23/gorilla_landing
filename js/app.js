@@ -4375,7 +4375,7 @@
                 const timeline = gsap.timeline({
                     scrollTrigger: {
                         trigger: ".our-team",
-                        start: "top 100%",
+                        start: "top top",
                         end: "bottom top",
                         scrub: true
                     }
